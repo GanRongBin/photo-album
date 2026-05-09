@@ -321,106 +321,31 @@ app.post('/api/albums/:id/cover/:photoId', async (c) => {
   return c.json(summary(c.env, album, baseUrl(c.req.raw)))
 })
 
-// ===== CHUNKED UPLOAD & DEDUP =====
+// ===== DIRECT UPLOAD =====
 
-// Check if file content already exists (hash-based dedup / 秒传)
-app.post('/api/photos/check', async (c) => {
-  const { hash } = await c.req.json()
-  if (!hash || typeof hash !== 'string') return c.json({ error: '缺少 hash' }, 400)
-  const raw = await c.env.META.get(`hash:${hash}`)
-  if (raw) return c.json({ exists: true, photo: JSON.parse(raw) })
-  return c.json({ exists: false })
-})
-
-// Upload a single chunk (续传 — each chunk stored independently)
-app.post('/api/photos/chunk', async (c) => {
+// Upload a single file — direct multipart, no chunking
+app.post('/api/photos/upload', async (c) => {
   const form = await c.req.formData()
-  const chunk = form.get('chunk')
-  const fileId = form.get('fileId')
-  const index = form.get('index')
-  const total = form.get('total')
-
-  if (!chunk || typeof chunk === 'string' || !fileId || typeof fileId !== 'string') {
-    return c.json({ error: '缺少必要参数' }, 400)
+  const f = form.get('file')
+  if (!f || typeof f === 'string') return c.json({ error: '请选择文件' }, 400)
+  if (!f.type.startsWith('image/') && !f.type.startsWith('video/')) {
+    return c.json({ error: '只允许上传图片和视频文件' }, 400)
   }
 
-  const buf = await chunk.arrayBuffer()
-  const bytes = new Uint8Array(buf)
-  let binary = ''
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
-
-  await c.env.META.put(`chunk:${fileId}:${index}`, btoa(binary), { expirationTtl: 7200 })
-  return c.json({ ok: true, index: parseInt(index as string) })
-})
-
-// Complete chunked upload — merge chunks and store final file
-app.post('/api/photos/complete', async (c) => {
-  const { fileId, fileName, total, contentType, hash } = await c.req.json()
-  if (!fileId || !fileName || !total) return c.json({ error: '缺少必要参数' }, 400)
-
-  // Collect all chunks
-  const parts: Uint8Array[] = []
-  let totalSize = 0
-  for (let i = 0; i < total; i++) {
-    const raw = await c.env.META.get(`chunk:${fileId}:${i}`)
-    if (!raw) return c.json({ error: `缺少分块 ${i}，请重新上传` }, 400)
-    const decoded = atob(raw)
-    const bytes = new Uint8Array(decoded.length)
-    for (let j = 0; j < decoded.length; j++) bytes[j] = decoded.charCodeAt(j)
-    parts.push(bytes)
-    totalSize += bytes.length
-  }
-
-  // Merge into single buffer
-  const merged = new Uint8Array(totalSize)
-  let offset = 0
-  for (const part of parts) {
-    merged.set(part, offset)
-    offset += part.length
-  }
-
-  // Store merged file
-  const ext = fileName.includes('.') ? fileName.split('.').pop()! : 'jpg'
+  const ext = f.name.includes('.') ? f.name.split('.').pop()! : 'jpg'
   const filename = `${generateId()}.${ext}`
-  const storedKey = await storePhoto(c.env, filename, merged.buffer, contentType || 'image/jpeg')
-
-  // Cleanup chunks
-  for (let i = 0; i < total; i++) {
-    await c.env.META.delete(`chunk:${fileId}:${i}`)
-  }
+  const buf = await f.arrayBuffer()
+  const storedKey = await storePhoto(c.env, filename, buf, f.type)
 
   const photo = {
-    id: generateId(), name: fileName, filename: storedKey,
+    id: generateId(),
+    name: f.name,
+    filename: storedKey,
     url: photoUrlFor(c.env, storedKey, baseUrl(c.req.raw)),
     createdAt: new Date().toISOString(),
   }
 
-  // Save hash → photo mapping for future dedup
-  if (hash) {
-    await c.env.META.put(`hash:${hash}`, JSON.stringify(photo))
-  }
-
   return c.json({ photo }, 201)
-})
-
-// Query completed chunks for resume (断点续传恢复)
-app.get('/api/photos/chunks/:fileId', async (c) => {
-  const { fileId } = c.req.param()
-  const completed: number[] = []
-  for (let i = 0; i < 100; i++) {
-    const exists = await c.env.META.get(`chunk:${fileId}:${i}`)
-    if (exists) completed.push(i)
-  }
-  return c.json({ completed, count: completed.length })
-})
-
-// Cancel chunked upload (cleanup)
-app.delete('/api/photos/chunks/:fileId', async (c) => {
-  const { fileId } = c.req.param()
-  for (let i = 0; i < 100; i++) {
-    await c.env.META.delete(`chunk:${fileId}:${i}`)
-  }
-  return c.body(null, 204)
 })
 
 

@@ -7,6 +7,7 @@ import albumsRouter from './routes/albums.js'
 import photosRouter from './routes/photos.js'
 import shareRouter from './routes/share.js'
 import sharedRouter from './routes/shared.js'
+import uploadRouter from './routes/upload.js'
 import { getPhotoStream } from './storage.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -26,6 +27,7 @@ app.use('/api/albums', albumsRouter)
 app.use('/api/albums', photosRouter)
 app.use('/api/albums', shareRouter)
 app.use('/api/shared', sharedRouter)
+app.use('/api/photos', uploadRouter)
 
 // Serve uploaded files from MinIO (or local disk)
 app.get('/uploads/:filename', async (req, res, next) => {
@@ -59,9 +61,9 @@ app.get('*', (req, res) => {
 app.use((err, req, res, next) => {
   console.error(err)
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ error: '文件大小超过10MB限制' })
+    return res.status(413).json({ error: '文件大小超过20MB限制' })
   }
-  if (err.message === '只允许上传图片文件') {
+  if (err.message === '只允许上传图片和视频文件') {
     return res.status(400).json({ error: err.message })
   }
   res.status(500).json({ error: '服务器内部错误' })

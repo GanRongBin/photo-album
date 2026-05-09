@@ -1,0 +1,80 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #333;
+  background: #f5f6fa;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app { min-height: 100vh; min-height: 100dvh; }
+
+.btn-primary {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 8px;
+  background: #4f8ef7;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.btn-primary:hover { background: #3b7de6; }
+.btn-primary:disabled { background: #a0c4ff; cursor: not-allowed; }
+
+.btn-cancel {
+  padding: 10px 22px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #fff;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.btn-cancel:hover { border-color: #4f8ef7; color: #4f8ef7; }
+
+.btn-back {
+  padding: 8px 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #fff;
+  color: #555;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-back:hover { border-color: #4f8ef7; color: #4f8ef7; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* Tap feedback for interactive elements */
+@media (hover: none) and (pointer: coarse) {
+  .btn-primary:active, .btn-cancel:active, .btn-back:active, .btn-share:active,
+  .btn-icon:active, .btn-sort:active, .btn-select-mode:active {
+    transform: scale(0.95) !important;
+    transition: transform 0.1s !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .btn-primary, .btn-cancel { padding: 12px 20px; font-size: 15px; min-height: 44px; }
+  .btn-back { padding: 10px 14px; font-size: 14px; min-height: 44px; }
+}

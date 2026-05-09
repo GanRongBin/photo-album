@@ -1,0 +1,16 @@
+name = "photo-album-api"
+main = "src/index.ts"
+compatibility_date = "2025-05-07"
+
+# R2 bucket for photos (enable R2 in dashboard first)
+# [[r2_buckets]]
+# binding = "PHOTOS"
+# bucket_name = "photo-album-photos"
+
+# KV namespace for metadata
+[[kv_namespaces]]
+binding = "META"
+id = "0f75e97791584484a91efc914516fa36"
+
+[observability]
+enabled = true
